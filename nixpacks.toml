@@ -1,0 +1,12 @@
+# Railway использует Nixpacks для сборки проекта.
+# Здесь мы явно указываем, что в окружение сборки нужно добавить ffmpeg —
+# без него pydub не сможет конвертировать аудио между форматами (WAV <-> OGG/Opus).
+
+[phases.setup]
+nixPkgs = ["ffmpeg", "python311"]
+
+[phases.install]
+cmds = ["pip install --no-cache-dir -r requirements.txt"]
+
+[start]
+cmd = "python bot.py"
