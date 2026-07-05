@@ -47,6 +47,21 @@ WEBHOOK_SECRET = (os.getenv("WEBHOOK_SECRET") or "change_me_secret_path").strip(
 WEBHOOK_PATH = "/webhook"
 WEBHOOK_URL = f"https://{WEBHOOK_HOST}{WEBHOOK_PATH}" if WEBHOOK_HOST else ""
 
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+# На Railway long polling надёжнее webhook (нет проблем с доменом/secret).
+# USE_POLLING=false — принудительный webhook.
+USE_POLLING = _env_bool(
+    "USE_POLLING",
+    default=bool(os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PUBLIC_DOMAIN")),
+)
+
 # Порт для aiohttp-сервера (Railway передаёт свой PORT)
 PORT = int(os.getenv("PORT", "8080"))
 HOST = "0.0.0.0"
