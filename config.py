@@ -43,8 +43,8 @@ def _resolve_webhook_host() -> str:
 
 
 WEBHOOK_HOST = _resolve_webhook_host()
-WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "change_me_secret_path")
-WEBHOOK_PATH = f"/webhook/{WEBHOOK_SECRET}"
+WEBHOOK_SECRET = (os.getenv("WEBHOOK_SECRET") or "change_me_secret_path").strip()
+WEBHOOK_PATH = "/webhook"
 WEBHOOK_URL = f"https://{WEBHOOK_HOST}{WEBHOOK_PATH}" if WEBHOOK_HOST else ""
 
 # Порт для aiohttp-сервера (Railway передаёт свой PORT)

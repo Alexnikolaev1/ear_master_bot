@@ -38,7 +38,7 @@ from handlers import (
     theory,
     weakspots,
 )
-from middlewares import ErrorMiddleware, UserMiddleware
+from middlewares import ErrorMiddleware, UpdateLoggingMiddleware, UserMiddleware
 from services.reminders import start_reminder_loop
 
 logging.basicConfig(
@@ -51,6 +51,7 @@ logger = logging.getLogger("ear_master_bot")
 def create_dispatcher() -> Dispatcher:
     dp = Dispatcher(storage=MemoryStorage())
 
+    dp.update.middleware(UpdateLoggingMiddleware())
     dp.update.middleware(ErrorMiddleware())
     dp.update.middleware(UserMiddleware())
 
@@ -96,8 +97,22 @@ async def on_startup(bot: Bot) -> None:
             url=config.WEBHOOK_URL,
             drop_pending_updates=True,
             allowed_updates=["message", "callback_query"],
+            secret_token=config.WEBHOOK_SECRET,
         )
         logger.info("Вебхук установлен: %s", config.WEBHOOK_URL)
+        info = await bot.get_webhook_info()
+        if info.last_error_message:
+            logger.error(
+                "Telegram webhook error: %s (date=%s)",
+                info.last_error_message,
+                info.last_error_date,
+            )
+        else:
+            logger.info(
+                "Webhook OK: pending_updates=%s ip=%s",
+                info.pending_update_count,
+                info.ip_address,
+            )
     else:
         logger.warning(
             "WEBHOOK_HOST не задан — вебхук не установлен. "
@@ -123,7 +138,12 @@ def main() -> None:
     dp.shutdown.register(on_shutdown)
 
     app = web.Application()
-    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=config.WEBHOOK_PATH)
+    webhook_handler = SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot,
+        secret_token=config.WEBHOOK_SECRET,
+    )
+    webhook_handler.register(app, path=config.WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
 
     async def health(_request: web.Request) -> web.Response:
