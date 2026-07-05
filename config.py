@@ -16,9 +16,33 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 # --- Вебхук ---
-# Railway сам прокидывает публичный домен через переменную RAILWAY_STATIC_URL
-# либо мы задаём WEBHOOK_HOST вручную.
-WEBHOOK_HOST = os.getenv("WEBHOOK_HOST") or os.getenv("RAILWAY_STATIC_URL", "")
+# Публичный домен для Telegram webhook. Railway даёт RAILWAY_PUBLIC_DOMAIN (*.up.railway.app).
+# Внутренний *.railway.internal недоступен из интернета — Telegram туда не достучится.
+
+
+def _normalize_host(raw: str) -> str:
+    return raw.strip().replace("https://", "").replace("http://", "").split("/")[0].strip()
+
+
+def _resolve_webhook_host() -> str:
+    explicit = _normalize_host(os.getenv("WEBHOOK_HOST", ""))
+    if explicit and "railway.internal" not in explicit:
+        return explicit
+    if explicit:
+        print(
+            "⚠️  WEBHOOK_HOST указывает на внутренний адрес Railway — "
+            "Telegram не доставит обновления. Задайте публичный домен "
+            "(*.up.railway.app) или удалите WEBHOOK_HOST."
+        )
+
+    for key in ("RAILWAY_PUBLIC_DOMAIN", "RAILWAY_STATIC_URL"):
+        host = _normalize_host(os.getenv(key, ""))
+        if host and "railway.internal" not in host:
+            return host
+    return ""
+
+
+WEBHOOK_HOST = _resolve_webhook_host()
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "change_me_secret_path")
 WEBHOOK_PATH = f"/webhook/{WEBHOOK_SECRET}"
 WEBHOOK_URL = f"https://{WEBHOOK_HOST}{WEBHOOK_PATH}" if WEBHOOK_HOST else ""

@@ -84,6 +84,14 @@ async def on_startup(bot: Bot) -> None:
     logger.info("Фоновые напоминания запущены.")
 
     if config.WEBHOOK_URL:
+        if "railway.internal" in config.WEBHOOK_URL:
+            logger.error(
+                "Вебхук указывает на внутренний адрес Railway: %s. "
+                "Telegram не доставит обновления. В Railway → Networking → Generate Domain, "
+                "затем задайте WEBHOOK_HOST=<ваш-домен>.up.railway.app",
+                config.WEBHOOK_URL,
+            )
+            return
         await bot.set_webhook(
             url=config.WEBHOOK_URL,
             drop_pending_updates=True,
